@@ -6,14 +6,33 @@ are decided in the core; this module only picks the pipe the text travels throug
 
 from __future__ import annotations
 
-from agent_memory.core.config import REASONER_ENDPOINT, REASONER_HOST, ExecutorConfig
+from agent_memory.core.config import (
+    REASONER_ENDPOINT,
+    REASONER_HOST,
+    REASONER_SESSION_STATEFUL,
+    REASONER_SESSION_STATELESS,
+    ExecutorConfig,
+)
 from agent_memory.core.errors import ReasonerUnavailableError
 
 from .credentials import VertexCredentials
-from .reasoners import EndpointReasoner, HostReasoner
+from .hosts import HOST_CODEX
+from .reasoners import EndpointReasoner, HostReasoner, StatefulHostReasoner
 
 
-def distiller(config: ExecutorConfig) -> EndpointReasoner | HostReasoner:
+def distiller(config: ExecutorConfig) -> EndpointReasoner | HostReasoner | StatefulHostReasoner:
+    if config.session_mode not in (REASONER_SESSION_STATELESS, REASONER_SESSION_STATEFUL):
+        raise ReasonerUnavailableError(
+            f"unsupported reasoner session mode {config.session_mode!r}"
+        )
+    if config.session_mode == REASONER_SESSION_STATEFUL:
+        if config.reasoner != REASONER_HOST:
+            raise ReasonerUnavailableError("stateful sessions require a host reasoner")
+        if config.host != HOST_CODEX:
+            raise ReasonerUnavailableError(
+                f"stateful sessions are unsupported for host {config.host!r}"
+            )
+        return StatefulHostReasoner.for_host(config.host, model=config.host_model)
     if config.reasoner == REASONER_HOST:
         return HostReasoner.for_host(config.host, model=config.host_model)
     if config.reasoner == REASONER_ENDPOINT:
