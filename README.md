@@ -258,6 +258,24 @@ prompt transfer but does not claim process reuse or fewer model interactions. `m
 `claude-code`, endpoint reasoners and Manage reject `stateful` explicitly instead of silently
 falling back to a context-less run.
 
+Codex can separately opt into the experimental single-process transport:
+
+```toml
+[executor.write]
+reasoner = "host"
+host = "codex"
+session_mode = "app-server"
+```
+
+This starts one short-lived `codex app-server` process and one ephemeral thread per batch, then
+uses `turn/start` for every library-controlled Agent Loop round. It keeps the same auth-only
+temporary `CODEX_HOME`, executor recursion marker, incremental observations, read-only sandbox,
+and fail-closed completion checks. Codex apps, plugins, hooks, personal memory, multi-agent and
+local execution features are disabled; any unexpected Host tool item or server request aborts
+the batch. The process and temporary state are destroyed in `close()` whether the batch succeeds
+or fails. This mode remains explicit while its CLI protocol and real-model performance mature;
+`stateless` remains the default and `stateful` continues to mean CLI resume.
+
 For `mem distill` and `mem sleep`, `--reason`, `--reason-host`, and `--reason-model` override the
 corresponding operation policy. Operation policy overrides legacy `[executor]` values. Hooks pass
 the producing host only as `--source-host`, so it supplies the default or resolves `host =

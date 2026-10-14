@@ -19,12 +19,16 @@ import shutil
 import tempfile
 import urllib.error
 import urllib.request
+from typing import TYPE_CHECKING
 
 from agent_memory.core.config import EXECUTOR_ENV_VAR
 from agent_memory.core.errors import ReasonerUnavailableError
 
 from .credentials import API_KEY_ENV, BASE_URL_ENV, VertexCredentials
 from .hosts import BINARIES, HOST_CLAUDE_CODE, Host, HostResult, HostSpec
+
+if TYPE_CHECKING:
+    from .app_server import CodexAppServerSession
 
 CHAT_COMPLETIONS = "/chat/completions"
 DEFAULT_ENDPOINT_MODEL = "google/gemini-2.5-flash"
@@ -127,6 +131,55 @@ class StatefulHostReasoner:
 
     @classmethod
     def for_host(cls, name: str, model: str = EMPTY) -> StatefulHostReasoner:
+        selected = HostReasoner.for_host(name, model)
+        return cls(selected.host)
+
+
+@dataclasses.dataclass
+class AppServerHostReasonerRun:
+    """One Codex process and ephemeral thread for one Write batch."""
+
+    host: Host
+    opening: str
+    _session: CodexAppServerSession = dataclasses.field(init=False)
+    _first: bool = dataclasses.field(default=True, init=False)
+    _closed: bool = dataclasses.field(default=False, init=False)
+    results: list[HostResult] = dataclasses.field(default_factory=list, init=False)
+
+    def __post_init__(self) -> None:
+        self._session = self.host.open_app_server()
+
+    def step(self, prompt: str) -> str:
+        if self._closed:
+            raise ReasonerUnavailableError("reasoner session is already closed")
+        payload = self.opening + (("\n\n" + prompt) if prompt else "") if self._first else prompt
+        self._first = False
+        result = self._session.step(payload)
+        self.results.append(result)
+        return _require_host_reply(self.host, result)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._session.close()
+
+
+@dataclasses.dataclass
+class AppServerHostReasoner:
+    """A Codex reasoner whose Write rounds share one short-lived process."""
+
+    host: Host
+    max_turns: int = 1
+
+    def __call__(self, prompt: str) -> str:
+        return HostReasoner(self.host, self.max_turns)(prompt)
+
+    def begin(self, opening: str) -> AppServerHostReasonerRun:
+        return AppServerHostReasonerRun(self.host, opening)
+
+    @classmethod
+    def for_host(cls, name: str, model: str = EMPTY) -> AppServerHostReasoner:
         selected = HostReasoner.for_host(name, model)
         return cls(selected.host)
 

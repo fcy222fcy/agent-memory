@@ -98,6 +98,20 @@ class StatelessGuidedReasoner:
         return self.reasoner(prompt + "\n\n" + PROTOCOL)
 
 
+def _deltas(values: list[int | None], cumulative: bool) -> list[int | None]:
+    if not cumulative:
+        return values
+    previous = 0
+    result: list[int | None] = []
+    for value in values:
+        if value is None:
+            result.append(None)
+            continue
+        result.append(value - previous)
+        previous = value
+    return result
+
+
 def _arm(mode: str, pair: int) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix=f"agent-memory-{mode}-{pair}-") as root:
         store = Store(pathlib.Path(root) / "store", agent="write-session-benchmark")
@@ -134,6 +148,8 @@ def _arm(mode: str, pair: int) -> dict[str, object]:
         written = [name for batch in report.batches for name in batch.written]
         records = [store.find(name) for name in written]
         replies = [result.text for result in host.results]
+        input_tokens = [result.input_tokens for result in host.results]
+        cached_input_tokens = [result.cached_input_tokens for result in host.results]
         final_usage = host.results[-1] if host.results else None
         return {
             "pair": pair,
@@ -143,8 +159,18 @@ def _arm(mode: str, pair: int) -> dict[str, object]:
             "agent_rounds": sum(batch.rounds for batch in report.batches),
             "cli_process_starts": len(host.results),
             "reasoner_calls": len(host.results),
+            "reasoner_seconds_by_call": [round(result.seconds, 3) for result in host.results],
             "prompt_chars": sum(len(prompt) for prompt in host.prompts),
             "prompt_chars_by_call": [len(prompt) for prompt in host.prompts],
+            "input_tokens_by_call": input_tokens,
+            "input_tokens_incremental_by_call": _deltas(
+                input_tokens, cumulative=mode == "stateful"
+            ),
+            "cached_input_tokens_by_call": cached_input_tokens,
+            "cached_input_tokens_incremental_by_call": _deltas(
+                cached_input_tokens, cumulative=mode == "stateful"
+            ),
+            "output_tokens_by_call": [result.output_tokens for result in host.results],
             "input_tokens_cumulative": final_usage.input_tokens if final_usage else None,
             "cached_input_tokens_cumulative": (
                 final_usage.cached_input_tokens if final_usage else None
@@ -166,7 +192,7 @@ def _arm(mode: str, pair: int) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runs", type=int, default=1, choices=range(1, 4))
+    parser.add_argument("--runs", type=int, default=1, choices=range(1, 6))
     parser.add_argument("--out", type=pathlib.Path)
     args = parser.parse_args()
     results: list[dict[str, object]] = []

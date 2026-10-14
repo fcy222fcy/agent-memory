@@ -97,6 +97,7 @@ def test_codex_without_tools_stays_read_only(tmp_path):
     )
     assert "read-only" in command
     assert "--add-dir" not in command
+    assert "--json" in command
 
 
 def test_codex_stateful_commands_persist_then_resume_without_replaying_options(tmp_path):

@@ -21,11 +21,15 @@ import subprocess
 import tempfile
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 from agent_memory.core import observation
 from agent_memory.core.config import MUSE_SETTINGS_ENV_VAR
 
 from .credentials import VertexCredentials
+
+if TYPE_CHECKING:
+    from .app_server import CodexAppServerSession
 
 HOST_CLAUDE_CODE = "claude-code"
 HOST_CODEX = "codex"
@@ -200,6 +204,7 @@ class CodexDialect(Dialect):
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
+            "--json",
             "--output-last-message",
             str(answer_file),
         ]
@@ -504,6 +509,14 @@ class Host:
                 result, text="", ok=False, error="Codex resumed a different session"
             )
         return result
+
+    def open_app_server(self) -> CodexAppServerSession:
+        """Start one batch-scoped Codex app-server session."""
+        if self.spec.name != HOST_CODEX:
+            raise ValueError("app-server sessions require the Codex host")
+        from .app_server import CodexAppServerSession
+
+        return CodexAppServerSession(self)
 
     @staticmethod
     def isolated_codex_environment(

@@ -4,7 +4,12 @@ import pytest
 from agent_memory.core.config import Config, OperationExecutorConfig
 from agent_memory.core.errors import ReasonerUnavailableError
 from agent_memory.executor import distiller, selection
-from agent_memory.executor.reasoners import EndpointReasoner, HostReasoner, StatefulHostReasoner
+from agent_memory.executor.reasoners import (
+    AppServerHostReasoner,
+    EndpointReasoner,
+    HostReasoner,
+    StatefulHostReasoner,
+)
 
 
 def test_default_write_uses_the_source_host_while_manage_uses_the_legacy_executor():
@@ -125,6 +130,15 @@ def test_stateful_mode_builds_only_the_supported_codex_transport():
     assert isinstance(chosen, StatefulHostReasoner)
 
 
+def test_app_server_mode_builds_only_the_supported_codex_transport():
+    executor = Config.default().executor
+    executor.write = OperationExecutorConfig(
+        reasoner="host", host="codex", session_mode="app-server"
+    )
+    chosen = distiller.distiller(selection.resolve(executor, selection.WRITE))
+    assert isinstance(chosen, AppServerHostReasoner)
+
+
 @pytest.mark.parametrize(
     ("reasoner", "host", "message"),
     [
@@ -139,6 +153,26 @@ def test_stateful_mode_fails_closed_for_unsupported_transports(reasoner, host, m
         reasoner=reasoner,
         host=host,
         session_mode="stateful",
+        endpoint="https://example.invalid/v1",
+    )
+    with pytest.raises(ReasonerUnavailableError, match=message):
+        distiller.distiller(configured)
+
+
+@pytest.mark.parametrize(
+    ("reasoner", "host", "message"),
+    [
+        ("host", "muse-code", "unsupported for host"),
+        ("host", "claude-code", "unsupported for host"),
+        ("endpoint", "", "require a host reasoner"),
+    ],
+)
+def test_app_server_mode_fails_closed_for_unsupported_transports(reasoner, host, message):
+    configured = dataclasses.replace(
+        Config.default().executor,
+        reasoner=reasoner,
+        host=host,
+        session_mode="app-server",
         endpoint="https://example.invalid/v1",
     )
     with pytest.raises(ReasonerUnavailableError, match=message):
