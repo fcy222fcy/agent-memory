@@ -9,8 +9,16 @@ validates what comes back, and owns every write.
 The Write toolkit is the only definition of what the reasoner may do during a batch:
 
 - **recall** searches current memory and lists matches by handle;
+- **recall with evidence** performs the same search and spends a bounded Write result budget on
+  opening the highest-ranked candidates inline;
 - **read** opens one active memory in full;
 - **submit operations** hands back the batch's operations under the operation schema.
+
+The combined lookup is optional. Its candidates are authorized exactly like ordinary Recall
+results, and the reasoner may follow it with more Recall or Read calls when the bounded evidence
+is insufficient. It is a Write-specific rendering rather than the ordinary Context surface:
+candidate handles must remain explicit, the server owns the character bound, and no retrieval
+result can authorize a handle that was not returned.
 
 A handle becomes nameable in update and supersede once the reconcile sheet or a tool result has
 shown it; any other handle stays refused, so steering by conversation or recalled content can at

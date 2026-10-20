@@ -242,9 +242,11 @@ what happened, and each conversation yields at least one event."""
 
 TOOL_GUIDE = """## Tools
 
-Look before you write: recall searches current memory by the words a memory would contain,
-and read opens one memory in full. A handle on the reconcile sheet or shown by a tool may be
-named in update and supersede. When you know what this conversation adds, call
+Look before you write: recall_with_evidence searches current memory and includes bounded body
+evidence for the highest-ranked matches, recall lists matching handles, and read opens one memory
+in full. Use further recall or read calls when the combined evidence is insufficient. A handle on
+the reconcile sheet or shown by a tool may be named in update and supersede. When you know what
+this conversation adds, call
 submit_operations with every operation. Each carries "op" (new, update, supersede, skip),
 "type", "fields", "abstract", "body" (markdown, the specifics in full), "handle" for update
 and supersede, "valid_from" when the fact holds from a date, "create_group" when needed, and
@@ -374,7 +376,9 @@ TOOL_RULES = """## Looking before writing
 
 You may look at the store first. Write plain text lines, one JSON object per line:
 {"look": "recall", "query": "<words the memory would contain>"} lists matching memories by
-handle, and {"look": "read", "name": "<handle>"} shows one memory in full. A reply that
+handle, {"look": "recall_with_evidence", "query": "<words the memory would contain>"} also
+includes bounded body evidence for the highest-ranked matches, and
+{"look": "read", "name": "<handle>"} shows one memory in full. A reply that
 looks is answered with what the library found, and you are asked again. A memory you were
 shown may be named by its handle in update and supersede, exactly like one on the reconcile
 sheet. When you have seen enough, reply with the operations only."""

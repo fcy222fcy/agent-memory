@@ -141,6 +141,22 @@ def test_a_long_observation_is_clipped(store):
     assert "(truncated)" in ask.prompts[1]
 
 
+def test_the_text_protocol_can_choose_bounded_evidence_recall(store):
+    old = _existing(store)
+    messages = _messages(store)
+    sheet = _empty_sheet(store, messages)
+    ask = _scripted(
+        _call(toolkit.TOOL_RECALL_WITH_EVIDENCE, query="queue timeout"),
+        _supersede(old.name),
+    )
+
+    outcome = agentic.negotiate(store, sheet, BRIEF, ask, store.config.write)
+
+    assert old.name in outcome.sheet.handle_names()
+    assert "infra/queue.yaml" in ask.prompts[1]
+    assert outcome.rounds == 2
+
+
 def test_distill_runs_the_negotiation_and_reports_the_rounds(store):
     old = _existing(store)
     messages = _messages(store)
