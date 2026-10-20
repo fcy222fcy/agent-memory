@@ -8,6 +8,8 @@ from agent_memory.mcp import server, write_session
 
 
 def _batch(store, tmp_path):
+    store.config.write.recall_with_evidence_enabled = True
+    store.config.save(store.root)
     old = store.record(
         type="fact",
         fields={"project": "pipeline", "subject": "queue timeout"},

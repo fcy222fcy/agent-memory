@@ -6,7 +6,7 @@ Native Write can spend one model turn selecting a Recall candidate and another o
 submitting operations. That cost is useful when the abstract is ambiguous, but wasteful when a
 small amount of body evidence would settle the decision immediately.
 
-The target is an optional `recall_with_evidence` tool alongside Recall, Read, and Submit. It uses
+The target is an opt-in `recall_with_evidence` tool alongside Recall, Read, and Submit. It uses
 the same current-memory ranking as Recall, returns only handles that become authorized on the
 reconcile sheet, and spends a server-owned character budget on a small amount of body evidence.
 The Agent keeps control of the ReAct loop and may continue recalling or reading whenever the
@@ -30,6 +30,7 @@ authorization remain unchanged.
 
 ## Promotion gate
 
-The tool remains an additive choice only. A follow-up may recommend broader prompting only when
+The tool remains an additive choice only and defaults off. A follow-up may recommend broader
+prompting only when
 paired real-model traces show fewer model request/response turns without a correctness,
 authorization, provenance, or latency regression. Tool-count reduction alone is insufficient.

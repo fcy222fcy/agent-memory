@@ -77,6 +77,7 @@ def test_the_endpoint_runs_tool_calls_until_the_model_stops(monkeypatch, store):
 
 
 def test_the_endpoint_exposes_and_runs_bounded_evidence_recall(monkeypatch, store):
+    store.config.write.recall_with_evidence_enabled = True
     old = store.record(
         name="queue-timeout",
         type="fact",

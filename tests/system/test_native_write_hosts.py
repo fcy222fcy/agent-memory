@@ -135,6 +135,8 @@ def test_a_host_distills_a_batch_through_the_toolkit_adapter(name, store, tmp_pa
     if name == hosts.HOST_HERMES:
         monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes-root"))
     old, messages = _batch(store)
+    store.config.write.recall_with_evidence_enabled = True
+    store.config.save(store.root)
     log = tmp_path / "host-log.json"
     script = [
         [toolkit.TOOL_RECALL, {toolkit.ARG_QUERY: "queue timeout"}],

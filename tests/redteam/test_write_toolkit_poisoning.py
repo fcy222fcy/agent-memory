@@ -37,6 +37,7 @@ def _store_with_payload(store):
 
 
 def _kit(store):
+    store.config.write.recall_with_evidence_enabled = True
     pointer = store.archive.append_session("boundary", ["user: the queue timeout is 30 seconds"])
     messages = sessions.resolve(store.layout, pointer)
     sheet = reconcile.build(store, "boundary", messages)

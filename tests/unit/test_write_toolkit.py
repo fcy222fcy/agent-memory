@@ -25,7 +25,8 @@ def _existing(store, **overrides):
     return store.record(**{**spec, **overrides})
 
 
-def _kit(store):
+def _kit(store, *, evidence=True):
+    store.config.write.recall_with_evidence_enabled = evidence
     messages = _messages(store)
     sheet = reconcile.build(store, "boundary", messages)
     empty = reconcile.Sheet(
@@ -45,7 +46,7 @@ def _supersede(handle):
     }
 
 
-def test_the_catalogue_offers_recall_read_and_submission_with_their_schemas(store):
+def test_the_catalogue_offers_bounded_evidence_recall_when_enabled(store):
     catalogue = {spec.name: spec for spec in _kit(store).catalogue()}
     assert set(catalogue) == {
         toolkit.TOOL_RECALL,
@@ -60,6 +61,16 @@ def test_the_catalogue_offers_recall_read_and_submission_with_their_schemas(stor
     assert catalogue[toolkit.TOOL_READ].schema["required"] == [toolkit.ARG_NAME]
     assert catalogue[toolkit.TOOL_SUBMIT].schema["required"] == [toolkit.ARG_OPERATIONS]
     assert all(spec.description for spec in catalogue.values())
+
+
+def test_the_catalogue_keeps_bounded_evidence_recall_disabled_by_default(store):
+    catalogue = {spec.name for spec in _kit(store, evidence=False).catalogue()}
+
+    assert catalogue == {toolkit.TOOL_RECALL, toolkit.TOOL_READ, toolkit.TOOL_SUBMIT}
+    reply = _kit(store, evidence=False).call(
+        toolkit.TOOL_RECALL_WITH_EVIDENCE, {toolkit.ARG_QUERY: "queue timeout"}
+    )
+    assert reply.is_error
 
 
 def test_recall_lists_matches_by_handle_and_makes_them_nameable(store):

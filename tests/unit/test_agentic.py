@@ -70,7 +70,7 @@ def test_a_recall_round_makes_a_handle_usable_that_the_sheet_did_not_carry(store
     assert outcome.rounds == 2
     assert reconcile.check(outcome.specs[0], outcome.sheet) == []
     assert old.name in ask.prompts[1]
-    assert prompts.TOOL_RULES in ask.prompts[0]
+    assert prompts.tool_rules(False) in ask.prompts[0]
     assert ask.prompts[0].startswith(BRIEF.text_protocol())
 
 
@@ -142,6 +142,7 @@ def test_a_long_observation_is_clipped(store):
 
 
 def test_the_text_protocol_can_choose_bounded_evidence_recall(store):
+    store.config.write.recall_with_evidence_enabled = True
     old = _existing(store)
     messages = _messages(store)
     sheet = _empty_sheet(store, messages)

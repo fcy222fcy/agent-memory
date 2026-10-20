@@ -139,11 +139,16 @@ class WriteToolkit:
         self.calls: list[ToolCall] = []
 
     def catalogue(self) -> tuple[ToolSpec, ...]:
-        return CATALOGUE
+        if self.store.config.write.recall_with_evidence_enabled:
+            return CATALOGUE
+        return tuple(spec for spec in CATALOGUE if spec.name != TOOL_RECALL_WITH_EVIDENCE)
 
     def call(self, name: str, arguments: object) -> ToolReply:
         given = arguments if isinstance(arguments, dict) else {}
-        if name == TOOL_RECALL:
+        available = tuple(spec.name for spec in self.catalogue())
+        if name not in available:
+            reply = ToolReply(f"unknown tool; the tools are {', '.join(available)}", True)
+        elif name == TOOL_RECALL:
             reply = self._recall(given)
         elif name == TOOL_RECALL_WITH_EVIDENCE:
             reply = self._recall_with_evidence(given)
@@ -151,8 +156,6 @@ class WriteToolkit:
             reply = self._read(given)
         elif name == TOOL_SUBMIT:
             reply = self._submit(given)
-        else:
-            reply = ToolReply(f"unknown tool; the tools are {', '.join(TOOLS)}", True)
         self.calls.append(ToolCall(name, given, reply))
         return reply
 
